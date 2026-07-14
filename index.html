@@ -2,9 +2,17 @@
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💰</text></svg>">
 <style>
   body{font-family:system-ui,-apple-system,sans-serif;max-width:1100px;margin:40px auto;padding:0 20px;color:#2d3748;background-color:#fcfbf7}
-  .header-container{display:flex;justify-content:space-between;align-items:center;border-bottom:3px solid #ecc94b;padding-bottom:15px;margin-bottom:30px}
+  .header-container{display:flex;justify-content:space-between;align-items:center;border-bottom:3px solid #ecc94b;padding-bottom:15px;margin-bottom:20px}
   h1,h2,h3{color:#1a202c;text-align:center}
   h1{margin:0}
+  
+  /* Sezione Istruzioni */
+  .instructions-container{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:30px;padding:20px;background-color:#fff;border-radius:12px;border:1px solid #f3f0e0;box-shadow:0 4px 6px -1px rgba(0,0,0,0.05)}
+  .instruction-column{font-size:0.9rem;line-height:1.5}
+  .instruction-column h3{text-align:left;margin-top:0;display:flex;align-items:center;gap:8px}
+  .instruction-column ul{padding-left:20px;margin:10px 0}
+  .instruction-column li{margin-bottom:6px}
+
   .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}
   .card,.box{background:#fff;border-radius:12px;padding:20px;margin:20px 0;box-shadow:0 4px 6px -1px rgba(0,0,0,0.05),0 2px 4px -1px rgba(0,0,0,0.03);border:1px solid #f3f0e0}
   .card{border-left:4px solid #ecc94b}
@@ -61,6 +69,11 @@
   button.action-btn:hover{background:#d69e2e;color:#fff}
   .chart-container{position:relative;height:300px;width:100%;max-width:900px;margin:15px auto}
   p{text-align:center}
+
+  /* Responsive layout per le istruzioni */
+  @media(max-width: 768px) {
+    .instructions-container { grid-template-columns: 1fr; gap: 16px; }
+  }
 </style>
 </head><body>
 
@@ -72,7 +85,29 @@
   </select>
 </div>
 
-<p id="uploadPrompt">Upload your master Excel file to process the data locally in your browser.</p>
+<!-- Sezione Istruzioni Bilingue -->
+<div class="instructions-container">
+  <div class="instruction-column">
+    <h3>🇬🇧 Quick Guide</h3>
+    <ul>
+      <li><b>Language Selector</b>: Use the dropdown in the top-right corner to switch between English and Italian at any time.</li>
+      <li><b>File Requirement</b>: Upload an Excel file containing at least the following column headers: <i>"Ragione Sociale"</i>, <i>"Imponibile"</i>, and <i>"Data documento"</i>.</li>
+      <li><b>Privacy</b>: Your data is processed entirely inside your web browser. No files are uploaded to any external server.</li>
+      <li><b>Bayesian Score</b>: The reliability rating measures client value and consistency (0-100), decaying if no invoices are registered for a long time.</li>
+    </ul>
+  </div>
+  <div class="instruction-column" style="border-left: 1px solid #f3f0e0; padding-left: 20px;">
+    <h3>🇮🇹 Guida Rapida</h3>
+    <ul>
+      <li><b>Scelta Lingua</b>: Usa il menu a tendina in alto a destra per cambiare la lingua tra Italiano e Inglese in qualsiasi momento.</li>
+      <li><b>Requisiti File</b>: Carica un file Excel che contenga almeno le colonne denominate: <i>"Ragione Sociale"</i>, <i>"Imponibile"</i> e <i>"Data documento"</i>.</li>
+      <li><b>Privacy</b>: I tuoi dati sono elaborati interamente all'interno del browser. Nessun dato viene inviato a server esterni.</li>
+      <li><b>Punteggio Bayesiano</b>: L'indice di affidabilità (0-100) valuta la costanza del cliente, calando se non vengono registrate fatture da molto tempo.</li>
+    </ul>
+  </div>
+</div>
+
+<p id="uploadPrompt" style="font-weight: 500; margin-bottom: 20px;">Upload your master Excel file to process the data locally in your browser.</p>
 
 <div class="flex-center">
   <div class="file-input-wrapper">
@@ -150,14 +185,14 @@
     <p id="descBayes" style="color:#718096;margin-top:-10px;">Reliability rating from 0 to 100 based on volume, consistency, and active relationship freshness.</p>
     <table>
       <thead>
-        <tr><th>#</th><th class="text-left" id="thBayesClient">Client</th><th>Punteggio di affidabilità (0-100)</th><th id="thBayesInv">Invoices</th><th id="thBayesLast">Last Active Year</th></tr>
+        <tr><th>#</th><th class="text-left" id="thBayesClient">Client</th><th id="thBayesScore">Reliability Score (0-100)</th><th id="thBayesInv">Invoices</th><th id="thBayesLast">Last Active Year</th></tr>
       </thead>
       <tbody id="topBayes"></tbody>
     </table>
   </div>
 
   <div class="box">
-    <h2>Country Statistics (Top Locations)</h2>
+    <h2 id="lblCountries">Country Statistics (Top Locations)</h2>
     <table>
       <thead><tr><th>#</th><th class="text-left" id="thCountry">Country</th><th class="num" id="thCRevenue">Revenue</th><th id="thCInvoices">Invoices</th><th class="num" id="thCShare">% Share</th></tr></thead>
       <tbody id="countryStats"></tbody>
@@ -256,7 +291,6 @@ const langs = {
 
 let currentLang = 'en';
 
-// Formattatori internazionali definiti in modo pulito
 const fmtIT = new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR', minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const fmtEN = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'EUR', minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const dfIT = new Intl.DateTimeFormat('it-IT');
@@ -510,7 +544,6 @@ function renderChart(yearsList){
         y:{
           ticks:{
             callback:v=> {
-              // Puliamo i decimali a seconda delle convenzioni linguistiche
               let formatted = formatEuro(v);
               return currentLang==='it' ? formatted.replace(',00','') : formatted.replace('.00','');
             }
@@ -581,6 +614,5 @@ clientSelect.addEventListener('change',e=>{
   clientDetails.hidden=false;
 });
 
-// Imposta l'Inglese come predefinito all'inizio
 setLanguage('en');
 </script></body></html>
