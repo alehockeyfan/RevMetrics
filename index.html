@@ -12,6 +12,9 @@
   .instruction-column ul{padding-left:20px;margin:10px 0}
   .instruction-column li{margin-bottom:6px}
 
+  /* Classe speciale per forzare la scomparsa totale */
+  .hide-completely { display: none !important; }
+
   .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}
   .card,.box{background:#fff;border-radius:12px;padding:20px;margin:20px 0;box-shadow:0 4px 6px -1px rgba(0,0,0,0.05),0 2px 4px -1px rgba(0,0,0,0.03);border:1px solid #f3f0e0}
   .card{border-left:4px solid #ecc94b}
@@ -406,9 +409,9 @@ file.addEventListener('change',async e=>{
     if(!r.length||['Ragione Sociale','Imponibile','Data documento'].some(k=>!(k in r[0])))throw Error(langs[currentLang].errNoColumns);
     parseData(r);
     
-    // Rimuove visivamente la guida e il prompt iniziale una volta caricato il file con successo
-    document.getElementById('instructions').style.setProperty('display', 'none', 'important');
-    document.getElementById('uploadPrompt').style.setProperty('display', 'none', 'important');
+    // Nascondiamo forzatamente la guida e il prompt iniziale usando una classe CSS dedicata
+    document.getElementById('instructions').classList.add('hide-completely');
+    document.getElementById('uploadPrompt').classList.add('hide-completely');
     
     renderDashboard();
   }catch(x){
