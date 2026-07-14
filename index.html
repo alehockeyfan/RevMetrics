@@ -6,7 +6,6 @@
   h1,h2,h3{color:#1a202c;text-align:center}
   h1{margin:0}
   
-  /* Sezione Istruzioni */
   .instructions-container{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:30px;padding:20px;background-color:#fff;border-radius:12px;border:1px solid #f3f0e0;box-shadow:0 4px 6px -1px rgba(0,0,0,0.05)}
   .instruction-column{font-size:0.9rem;line-height:1.5}
   .instruction-column h3{text-align:left;margin-top:0;display:flex;align-items:center;gap:8px}
@@ -70,7 +69,6 @@
   .chart-container{position:relative;height:300px;width:100%;max-width:900px;margin:15px auto}
   p{text-align:center}
 
-  /* Responsive layout per le istruzioni */
   @media(max-width: 768px) {
     .instructions-container { grid-template-columns: 1fr; gap: 16px; }
   }
@@ -85,7 +83,6 @@
   </select>
 </div>
 
-<!-- Sezione Istruzioni Bilingue -->
 <div class="instructions-container">
   <div class="instruction-column">
     <h3>🇬🇧 Quick Guide</h3>
@@ -94,6 +91,7 @@
       <li><b>File Requirement</b>: Upload an Excel file containing at least the following column headers: <i>"Ragione Sociale"</i>, <i>"Imponibile"</i>, and <i>"Data documento"</i>.</li>
       <li><b>Privacy</b>: Your data is processed entirely inside your web browser. No files are uploaded to any external server.</li>
       <li><b>Bayesian Score</b>: The reliability rating measures client value and consistency (0-100), decaying if no invoices are registered for a long time.</li>
+      <li><b>Merge Clients</b>: Use this tool if a client has changed their company name. Combining their historical records will ensure you get precise, unified statistics.</li>
     </ul>
   </div>
   <div class="instruction-column" style="border-left: 1px solid #f3f0e0; padding-left: 20px;">
@@ -103,6 +101,7 @@
       <li><b>Requisiti File</b>: Carica un file Excel che contenga almeno le colonne denominate: <i>"Ragione Sociale"</i>, <i>"Imponibile"</i> e <i>"Data documento"</i>.</li>
       <li><b>Privacy</b>: I tuoi dati sono elaborati interamente all'interno del browser. Nessun dato viene inviato a server esterni.</li>
       <li><b>Punteggio Bayesiano</b>: L'indice di affidabilità (0-100) valuta la costanza del cliente, calando se non vengono registrate fatture da molto tempo.</li>
+      <li><b>Unisci Clienti (Merge)</b>: Utilizza questo strumento se un cliente ha cambiato ragione sociale nel tempo. Unendo i record storici otterrai statistiche precise e unificate.</li>
     </ul>
   </div>
 </div>
@@ -269,350 +268,3 @@ const langs = {
     optSelectClient: "Seleziona un cliente…",
     lblCTotal: "Fatturato totale", lblCShare: "Peso sul fatturato complessivo", lblCInvoices: "Numero fatture", lblCAvg: "Fattura media", lblCBayes: "Indice affidabilità bayesiana", lblCFirst: "Prima fattura", lblCLast: "Ultima fattura", lblCBest: "Anno migliore",
     lblCYears: "Fatturato per anno",
-    thAn: "Anno", thRev: "Fatturato", thInv: "Fatture",
-    lblTopBayes: "Top 10 per indice affidabilità bayesiana",
-    descBayes: "Punteggio di affidabilità da 0 a 100 basato su volume, costanza e attualità dell'ultimo rapporto attivo.",
-    thBayesClient: "Cliente", thBayesScore: "Punteggio di affidabilità (0-100)", thBayesInv: "Fatture", thBayesLast: "Ultimo anno attivo",
-    lblCountries: "Statistiche Paesi (Top Locations)",
-    thCountry: "Paese", thCRevenue: "Fatturato", thCInvoices: "Fatture", thCShare: "% del Totale",
-    errNoColumns: "Non trovo le colonne richieste nel primo foglio.",
-    errFile: "Errore: ",
-    points: "pti",
-    paretoText: "clienti generano l'80% delle entrate",
-    totalSuffix: "del totale",
-    statusInactive: "Inattivo (oltre 8 anni) 🛑",
-    statusExcellent: "Eccellente & Attivo 🌟",
-    statusHigh: "Alta Costanza 👍",
-    statusMedium: "Medio-Bassa Costanza",
-    statusUnstable: "Instabile/Occasionale 💤",
-    lastActive: "ultimo attivo"
-  }
-};
-
-let currentLang = 'en';
-
-const fmtIT = new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR', minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const fmtEN = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'EUR', minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const dfIT = new Intl.DateTimeFormat('it-IT');
-const dfEN = new Intl.DateTimeFormat('en-US');
-
-function formatEuro(val) {
-  return currentLang === 'it' ? fmtIT.format(val) : fmtEN.format(val);
-}
-
-function formatDate(dateObj) {
-  return currentLang === 'it' ? dfIT.format(dateObj) : dfEN.format(dateObj);
-}
-
-let clients={}, yearly={}, countries={}, totalSales=0, invoiceTotalCount=0, myChart=null, maxActiveYear=2026;
-
-function setLanguage(lang) {
-  currentLang = lang;
-  document.documentElement.lang = lang;
-  
-  const t = langs[lang];
-  document.getElementById('mainTitle').innerText = t.mainTitle;
-  document.getElementById('uploadPrompt').innerText = t.uploadPrompt;
-  document.getElementById('btnUpload').innerText = t.btnUpload;
-  document.getElementById('mergeTitle').innerText = t.mergeTitle;
-  document.getElementById('mergeDesc').innerText = t.mergeDesc;
-  document.getElementById('optMergeSrc').innerText = t.optMergeSrc;
-  document.getElementById('optMergeTgt').innerText = t.optMergeTgt;
-  document.getElementById('btnMerge').innerText = t.btnMerge;
-  document.getElementById('lblTotal').innerText = t.lblTotal;
-  document.getElementById('lblInvoices').innerText = t.lblInvoices;
-  document.getElementById('lblUniqueClients').innerText = t.lblUniqueClients;
-  document.getElementById('lblAvgYear').innerText = t.lblAvgYear;
-  document.getElementById('lblAvgInvoice').innerText = t.lblAvgInvoice;
-  document.getElementById('lblPareto').innerText = t.lblPareto;
-  document.getElementById('lblBestYear').innerText = t.lblBestYear;
-  document.getElementById('lblTop15').innerText = t.lblTop15;
-  document.getElementById('thRank').innerText = t.thRank;
-  document.getElementById('thClient').innerText = t.thClient;
-  document.getElementById('thRevenue').innerText = t.thRevenue;
-  document.getElementById('thInvoices').innerText = t.thInvoices;
-  document.getElementById('thFirst').innerText = t.thFirst;
-  document.getElementById('thLast').innerText = t.thLast;
-  document.getElementById('thShare').innerText = t.thShare;
-  document.getElementById('lblTrend').innerText = t.lblTrend;
-  document.getElementById('lblClientAnalysis').innerText = t.lblClientAnalysis;
-  document.getElementById('lblCTotal').innerText = t.lblCTotal;
-  document.getElementById('lblCShare').innerText = t.lblCShare;
-  document.getElementById('lblCInvoices').innerText = t.lblCInvoices;
-  document.getElementById('lblCAvg').innerText = t.lblCAvg;
-  document.getElementById('lblCBayes').innerText = t.lblCBayes;
-  document.getElementById('lblCFirst').innerText = t.lblCFirst;
-  document.getElementById('lblCLast').innerText = t.lblCLast;
-  document.getElementById('lblCBest').innerText = t.lblCBest;
-  document.getElementById('lblCYears').innerText = t.lblCYears;
-  document.getElementById('thAn').innerText = t.thAn;
-  document.getElementById('thRev').innerText = t.thRev;
-  document.getElementById('thInv').innerText = t.thInv;
-  document.getElementById('lblTopBayes').innerText = t.lblTopBayes;
-  document.getElementById('descBayes').innerText = t.descBayes;
-  document.getElementById('thBayesClient').innerText = t.thBayesClient;
-  document.getElementById('thBayesScore').innerText = t.thBayesScore;
-  document.getElementById('thBayesInv').innerText = t.thBayesInv;
-  document.getElementById('thBayesLast').innerText = t.thBayesLast;
-  document.getElementById('lblCountries').innerText = t.lblCountries;
-  document.getElementById('thCountry').innerText = t.thCountry;
-  document.getElementById('thCRevenue').innerText = t.thCRevenue;
-  document.getElementById('thCInvoices').innerText = t.thCInvoices;
-  document.getElementById('thCShare').innerText = t.thCShare;
-
-  if (Object.keys(clients).length > 0) {
-    renderDashboard();
-    const selectedClient = document.getElementById('clientSelect').value;
-    if (selectedClient) {
-      document.getElementById('clientSelect').dispatchEvent(new Event('change'));
-    }
-  }
-}
-
-document.getElementById('langSelect').addEventListener('change', e => {
-  setLanguage(e.target.value);
-});
-
-function amt(v){if(typeof v==='number')return v;let s=String(v??'').trim().replace(/\s/g,'').replace(/€/g,'');if(s.includes(',')&&s.includes('.'))s=s.replace(/\./g,'').replace(',','.');else s=s.replace(',','.');return Number(s)||0}
-function dat(v){if(v instanceof Date&&!isNaN(v))return v;if(typeof v==='number'){let d=XLSX.SSF.parse_date_code(v);if(d)return new Date(d.y,d.m-1,d.d)}let s=String(v??'').trim(),m=s.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})$/);if(m)return new Date(+m[3],+m[2]-1,+m[1]);let d=new Date(s);return isNaN(d)?null:d}
-function esc(s){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
-
-file.addEventListener('change',async e=>{
-  try{
-    error.textContent='';
-    let b=await e.target.files[0].arrayBuffer(),w=XLSX.read(b,{type:'array',cellDates:true}),r=XLSX.utils.sheet_to_json(w.Sheets[w.SheetNames[0]],{defval:null});
-    if(!r.length||['Ragione Sociale','Imponibile','Data documento'].some(k=>!(k in r[0])))throw Error(langs[currentLang].errNoColumns);
-    parseData(r);
-    renderDashboard();
-  }catch(x){
-    error.textContent=langs[currentLang].errFile+x.message;
-  }
-});
-
-function parseData(rows){
-  clients={};yearly={};countries={};totalSales=0;invoiceTotalCount=0;maxActiveYear=2026;
-  rows.forEach(r=>{
-    let name=String(r['Ragione Sociale']??'').trim(),
-        a=amt(r['Imponibile']),
-        d=dat(r['Data documento']),
-        country=String(r['Paese']||r['Nazione']||r['Stato']||'Non specificato').trim();
-    if(!name||!d)return;
-    let y=d.getFullYear();
-    if(y > maxActiveYear) maxActiveYear = y;
-    totalSales+=a;
-    invoiceTotalCount++;
-    yearly[y]=(yearly[y]||0)+a;
-    
-    if(!countries[country])countries[country]={name:country,total:0,count:0};
-    countries[country].total+=a;
-    countries[country].count++;
-
-    if(!clients[name])clients[name]={name,total:0,count:0,first:d,last:d,years:{}};
-    let c=clients[name];
-    c.total+=a;
-    c.count++;
-    if(d<c.first)c.first=d;
-    if(d>c.last)c.last=d;
-    if(!c.years[y])c.years[y]={total:0,count:0};
-    c.years[y].total+=a;
-    c.years[y].count++;
-  });
-}
-
-function getBayesianScore(c) {
-  let avgInvoice = c.count ? (c.total / c.count) : 0;
-  let globalAvgInvoice = invoiceTotalCount ? (totalSales / invoiceTotalCount) : 0;
-  let m = 3; 
-  
-  let rawBayesian = ((c.count * avgInvoice) + (m * globalAvgInvoice)) / (c.count + m);
-  
-  let lastInvoiceYear = c.last.getFullYear();
-  let yearsPassed = maxActiveYear - lastInvoiceYear;
-  let decayFactor = Math.max(0, 1 - (yearsPassed / 8));
-  
-  let score = rawBayesian * decayFactor;
-  let maxRef = globalAvgInvoice * 3;
-  
-  let normalized = Math.min(100, Math.round((score / maxRef) * 100));
-  return isNaN(normalized) ? 0 : normalized;
-}
-
-function renderDashboard(){
-  let ys=Object.keys(yearly).sort((a,b)=>a-b),best=[...ys].sort((a,b)=>yearly[b]-yearly[a])[0];
-  const t = langs[currentLang];
-  const localeStr = currentLang==='it'?'it-IT':'en-US';
-  
-  total.textContent=formatEuro(totalSales);
-  invoiceCount.textContent=invoiceTotalCount.toLocaleString(localeStr);
-  clientCount.textContent=Object.keys(clients).length.toLocaleString(localeStr);
-  avgYear.textContent=formatEuro(ys.length?totalSales/ys.length:0);
-  avgInvoiceGlobal.textContent=invoiceTotalCount?formatEuro(totalSales/invoiceTotalCount):'—';
-
-  let sortedClients=Object.values(clients).sort((a,b)=>b.total-a.total);
-  let runningSum=0,paretoCount=0;
-  for(let i=0;i<sortedClients.length;i++){
-    runningSum+=sortedClients[i].total;
-    paretoCount++;
-    if(runningSum>=totalSales*0.8) break;
-  }
-  let pctClients=Object.keys(clients).length?((paretoCount/Object.keys(clients).length)*100).toFixed(0):0;
-  paretoValue.textContent=`${paretoCount} ${currentLang==='it'?'clienti':'clients'}`;
-  paretoSub.textContent=`${t.paretoText} (${pctClients}% ${t.totalSuffix})`;
-
-  bestYear.textContent=best?best+' · '+formatEuro(yearly[best]):'—';
-
-  top15.innerHTML=sortedClients.slice(0,15).map((c,i)=>`<tr>
-    <td>${i+1}</td>
-    <td class="text-left"><span class="badge-name">${esc(c.name)}</span></td>
-    <td class="num">${formatEuro(c.total)}</td>
-    <td>${c.count.toLocaleString(localeStr)}</td>
-    <td>${formatDate(c.first)}</td>
-    <td>${formatDate(c.last)}</td>
-    <td class="num">${totalSales?((c.total/totalSales)*100).toFixed(1):0}%</td>
-  </tr>`).join('');
-
-  let bayesianSorted = Object.values(clients).map(c => {
-    return { ...c, score: getBayesianScore(c) };
-  }).sort((a,b) => b.score - a.score);
-
-  topBayes.innerHTML = bayesianSorted.slice(0, 10).map((c, i) => `<tr>
-    <td>${i+1}</td>
-    <td class="text-left"><span class="badge-name">${esc(c.name)}</span></td>
-    <td style="font-weight:700;color:#c2410c;font-size:1.15rem;">${c.score} ${t.points}</td>
-    <td>${c.count.toLocaleString(localeStr)}</td>
-    <td>${c.last.getFullYear()}</td>
-  </tr>`).join('');
-
-  let sortedNames=Object.keys(clients).sort((a,b)=>a.localeCompare(b,currentLang));
-  clientSelect.innerHTML=`<option value="">${t.optSelectClient}</option>`+sortedNames.map(n=>`<option>${esc(n)}</option>`).join('');
-  
-  mergeSource.innerHTML=`<option value="">${t.optMergeSrc}</option>`+sortedNames.map(n=>`<option>${esc(n)}</option>`).join('');
-  mergeTarget.innerHTML=`<option value="">${t.optMergeTgt}</option>`+sortedNames.map(n=>`<option>${esc(n)}</option>`).join('');
-
-  countryStats.innerHTML=Object.values(countries).sort((a,b)=>b.total-a.total).map((co,i)=>`<tr>
-    <td>${i+1}</td>
-    <td class="text-left"><span class="badge-name" style="background-color:#f0fdf4; color:#15803d;">${esc(co.name)}</span></td>
-    <td class="num">${formatEuro(co.total)}</td>
-    <td>${co.count.toLocaleString(localeStr)}</td>
-    <td class="num">${totalSales?((co.total/totalSales)*100).toFixed(1):0}%</td>
-  </tr>`).join('');
-
-  renderChart(ys);
-
-  mergeSection.hidden=false;
-  dashboard.hidden=false;
-  clientDetails.hidden=true;
-}
-
-function renderChart(yearsList){
-  let ctx=document.getElementById('yearlyChart').getContext('2d');
-  if(myChart) myChart.destroy();
-  
-  let chartData=yearsList.map(y=>yearly[y]);
-  const chartLabel = currentLang==='it'?'Fatturato Annuo (€)':'Annual Revenue (€)';
-  
-  myChart=new Chart(ctx,{
-    type:'line',
-    data:{
-      labels:yearsList,
-      datasets:[{
-        label:chartLabel,
-        data:chartData,
-        borderColor:'#d97706',
-        backgroundColor:'rgba(217,119,6,0.1)',
-        borderWidth:3,
-        fill:true,
-        tension:0.3,
-        pointBackgroundColor:'#b45309',
-        pointBorderColor:'#fff',
-        pointRadius:5,
-        pointHoverRadius:7
-      }]
-    },
-    options:{
-      responsive:true,
-      maintainAspectRatio:false,
-      plugins:{
-        legend:{display:false},
-        tooltip:{
-          callbacks:{
-            label:context=> (currentLang==='it'?'Fatturato: ':'Revenue: ')+formatEuro(context.raw)
-          }
-        }
-      },
-      scales:{
-        y:{
-          ticks:{
-            callback:v=> {
-              let formatted = formatEuro(v);
-              return currentLang==='it' ? formatted.replace(',00','') : formatted.replace('.00','');
-            }
-          },
-          grid:{color:'#edf2f7'}
-        },
-        x:{
-          grid:{display:false}
-        }
-      }
-    }
-  });
-}
-
-btnMerge.addEventListener('click',()=>{
-  let src=mergeSource.value,tgt=mergeTarget.value;
-  if(!src||!tgt||src===tgt)return;
-  let cSrc=clients[src],cTgt=clients[tgt];
-  cTgt.total+=cSrc.total;
-  cTgt.count+=cSrc.count;
-  if(cSrc.first<cTgt.first)cTgt.first=cSrc.first;
-  if(cSrc.last>cTgt.last)cTgt.last=cSrc.last;
-  Object.keys(cSrc.years).forEach(y=>{
-    if(!cTgt.years[y])cTgt.years[y]={total:0,count:0};
-    cTgt.years[y].total+=cSrc.years[y].total;
-    cTgt.years[y].count+=cSrc.years[y].count;
-  });
-  delete clients[src];
-  renderDashboard();
-});
-
-clientSelect.addEventListener('change',e=>{
-  let c=clients[e.target.value];
-  if(!c){clientDetails.hidden=true;return}
-  const t = langs[currentLang];
-  const localeStr = currentLang==='it'?'it-IT':'en-US';
-  
-  cTotal.textContent=formatEuro(c.total);
-  cPeso.textContent=totalSales?((c.total/totalSales)*100).toFixed(1)+'%':'0%';
-  cInvoices.textContent=c.count.toLocaleString(localeStr);
-  
-  let avgInvoice = c.count ? (c.total / c.count) : 0;
-  cAverage.textContent=c.count?formatEuro(avgInvoice):'—';
-  
-  let bayesianScore = getBayesianScore(c);
-  cBayesScore.textContent = bayesianScore + ` ${t.points}`;
-  
-  let rating = t.statusUnstable;
-  let lastInvoiceYear = c.last.getFullYear();
-  let yearsPassed = maxActiveYear - lastInvoiceYear;
-  
-  if (yearsPassed >= 8) {
-    rating = t.statusInactive;
-  } else if (c.count >= 10 && bayesianScore >= 70) {
-    rating = t.statusExcellent;
-  } else if (c.count >= 5 && yearsPassed <= 2) {
-    rating = t.statusHigh;
-  } else if (c.count >= 2 && yearsPassed <= 4) {
-    rating = t.statusMedium;
-  }
-  cBayesRating.textContent = `${rating} (${t.lastActive}: ${lastInvoiceYear})`;
-
-  cFirst.textContent=formatDate(c.first);
-  cLast.textContent=formatDate(c.last);
-  let ys=Object.keys(c.years).sort((a,b)=>a-b),best=[...ys].sort((a,b)=>c.years[b].total-c.years[a].total)[0];
-  cBest.textContent=best?best+' · '+formatEuro(c.years[best].total):'—';
-  clientYears.innerHTML=ys.map(y=>`<tr><td>${y}</td><td class="num">${formatEuro(c.years[y].total)}</td><td>${c.years[y].count.toLocaleString(localeStr)}</td></tr>`).join('');
-  clientDetails.hidden=false;
-});
-
-setLanguage('en');
-</script></body></html>
