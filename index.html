@@ -300,6 +300,7 @@ function formatEuro(val) {
 }
 
 function formatDate(dateObj) {
+  if (!dateObj || isNaN(dateObj.getTime())) return '—';
   return currentLang === 'it' ? dfIT.format(dateObj) : dfEN.format(dateObj);
 }
 
@@ -373,7 +374,30 @@ document.getElementById('langSelect').addEventListener('change', e => {
 });
 
 function amt(v){if(typeof v==='number')return v;let s=String(v??'').trim().replace(/\s/g,'').replace(/€/g,'');if(s.includes(',')&&s.includes('.'))s=s.replace(/\./g,'').replace(',','.');else s=s.replace(',','.');return Number(s)||0}
-function dat(v){if(v instanceof Date&&!isNaN(v))return v;if(typeof v==='number'){let d=XLSX.SSF.parse_date_code(v);if(d)return new Date(d.y,d.m-1,d.d)}let s=String(v??'').trim(),m=s.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})$/);if(m)return new Date(+m[3],+m[2]-1,+m[1]);let d=new Date(s);return isNaN(d)?null:d}
+
+function dat(v){
+  if (!v) return null;
+  if (v instanceof Date && !isNaN(v.getTime())) return v;
+  
+  // Se è un oggetto ma non passa "instanceof Date" proviamo a verificare se ha metodi date tipici
+  if (typeof v === 'object' && typeof v.getMonth === 'function') {
+    let testD = new Date(v);
+    if (!isNaN(testD.getTime())) return testD;
+  }
+  
+  if(typeof v==='number'){
+    let d=XLSX.SSF.parse_date_code(v);
+    if(d) return new Date(d.y,d.m-1,d.d);
+  }
+  
+  let s=String(v).trim();
+  let m=s.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})$/);
+  if(m) return new Date(+m[3],+m[2]-1,+m[1]);
+  
+  let d=new Date(s);
+  return isNaN(d.getTime())?null:d;
+}
+
 function esc(s){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
 
 file.addEventListener('change',async e=>{
