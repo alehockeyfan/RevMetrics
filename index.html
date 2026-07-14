@@ -83,7 +83,7 @@
   </select>
 </div>
 
-<div class="instructions-container">
+<div class="instructions-container" id="instructions">
   <div class="instruction-column">
     <h3>🇬🇧 Quick Guide</h3>
     <ul>
@@ -97,7 +97,7 @@
   <div class="instruction-column" style="border-left: 1px solid #f3f0e0; padding-left: 20px;">
     <h3>🇮🇹 Guida Rapida</h3>
     <ul>
-      <li><b>Scelta Lingua</b>: Usa il menu a tendina in alto a destra per cambiare la lingua tra Italiano e Inglese in qualsiasi momento.</li>
+      <li><b>Scelta Lingua</b>: Usa the menu a tendina in alto a destra per cambiare la lingua tra Italiano e Inglese in qualsiasi momento.</li>
       <li><b>Requisiti File</b>: Carica un file Excel che contenga almeno le colonne denominate: <i>"Ragione Sociale"</i>, <i>"Imponibile"</i> e <i>"Data documento"</i>.</li>
       <li><b>Privacy</b>: I tuoi dati sono elaborati interamente all'interno del browser. Nessun dato viene inviato a server esterni.</li>
       <li><b>Punteggio Bayesiano</b>: L'indice di affidabilità (0-100) valuta la costanza del cliente, calando se non vengono registrate fatture da molto tempo.</li>
@@ -379,7 +379,6 @@ function dat(v){
   if (!v) return null;
   if (v instanceof Date && !isNaN(v.getTime())) return v;
   
-  // Se è un oggetto ma non passa "instanceof Date" proviamo a verificare se ha metodi date tipici
   if (typeof v === 'object' && typeof v.getMonth === 'function') {
     let testD = new Date(v);
     if (!isNaN(testD.getTime())) return testD;
@@ -406,6 +405,11 @@ file.addEventListener('change',async e=>{
     let b=await e.target.files[0].arrayBuffer(),w=XLSX.read(b,{type:'array',cellDates:true}),r=XLSX.utils.sheet_to_json(w.Sheets[w.SheetNames[0]],{defval:null});
     if(!r.length||['Ragione Sociale','Imponibile','Data documento'].some(k=>!(k in r[0])))throw Error(langs[currentLang].errNoColumns);
     parseData(r);
+    
+    // Nascondiamo la guida e il testo del prompt di caricamento
+    document.getElementById('instructions').style.display = 'none';
+    document.getElementById('uploadPrompt').style.display = 'none';
+    
     renderDashboard();
   }catch(x){
     error.textContent=langs[currentLang].errFile+x.message;
