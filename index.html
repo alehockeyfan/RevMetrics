@@ -1,9 +1,10 @@
-<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Analisi fatturato</title>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>RevStats</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💰</text></svg>">
 <style>
   body{font-family:system-ui,-apple-system,sans-serif;max-width:1100px;margin:40px auto;padding:0 20px;color:#2d3748;background-color:#fcfbf7}
+  .header-container{display:flex;justify-content:space-between;align-items:center;border-bottom:3px solid #ecc94b;padding-bottom:15px;margin-bottom:30px}
   h1,h2,h3{color:#1a202c;text-align:center}
-  h1{border-bottom:3px solid #ecc94b;padding-bottom:15px;margin-bottom:30px}
+  h1{margin:0}
   .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}
   .card,.box{background:#fff;border-radius:12px;padding:20px;margin:20px 0;box-shadow:0 4px 6px -1px rgba(0,0,0,0.05),0 2px 4px -1px rgba(0,0,0,0.03);border:1px solid #f3f0e0}
   .card{border-left:4px solid #ecc94b}
@@ -23,6 +24,10 @@
   .flex-center{display:flex;justify-content:center;margin:15px 0}
   select{font:inherit;padding:10px;width:100%;max-width:500px;border:1px solid #cbd5e0;border-radius:6px;outline:none;text-align:center}
   select:focus{border-color:#ecc94b;box-shadow:0 0 0 3px rgba(236,201,75,0.2)}
+  
+  /* Selettore lingua */
+  .lang-selector{padding:6px 12px;border:1px solid #cbd5e0;border-radius:6px;background:#fff;cursor:pointer;font-weight:500}
+
   #error{color:#e53e3e;font-weight:500;text-align:center}
   .merge-zone{display:flex;gap:12px;align-items:center;justify-content:center;flex-wrap:wrap;margin-top:12px}
   
@@ -59,95 +64,103 @@
   p{text-align:center}
 </style>
 </head><body>
-<h1>Analisi fatturato</h1>
-<p>Carica il file Excel master per elaborare i dati localmente nel tuo browser.</p>
+
+<div class="header-container">
+  <h1 id="mainTitle">Revenue Analysis</h1>
+  <select id="langSelect" class="lang-selector" style="max-width:120px;">
+    <option value="en">🇬🇧 English</option>
+    <option value="it">🇮🇹 Italiano</option>
+  </select>
+</div>
+
+<p id="uploadPrompt">Upload your master Excel file to process the data locally in your browser.</p>
 
 <div class="flex-center">
   <div class="file-input-wrapper">
-    <button class="btn-goodreads">🔄 Carica file Excel</button>
+    <button class="btn-goodreads" id="btnUpload">🔄 Load Excel File</button>
     <input id="file" type="file" accept=".xlsx,.xls">
   </div>
 </div>
 <p id="error"></p>
 
 <div id="mergeSection" class="box" hidden>
-  <h2>Gestione cambi nome cliente (Merge)</h2>
-  <p style="color:#718096;margin:0 0 10px 0">Unisci la storia di due clienti che hanno cambiato ragione sociale.</p>
+  <h2 id="mergeTitle">Manage Client Name Changes (Merge)</h2>
+  <p id="mergeDesc" style="color:#718096;margin:0 0 10px 0">Merge the history of two clients that changed their company name.</p>
   <div class="merge-zone">
-    <select id="mergeSource" style="max-width:250px;"><option value="">Vecchio nome (da eliminare)...</option></select>
+    <select id="mergeSource" style="max-width:250px;"><option value="" id="optMergeSrc">Old name (to delete)...</option></select>
     <span style="font-weight:bold;color:#718096">➡️ in ➡️</span>
-    <select id="mergeTarget" style="max-width:250px;"><option value="">Nuovo nome (da mantenere)...</option></select>
-    <button id="btnMerge" class="action-btn">Unisci Clienti</button>
+    <select id="mergeTarget" style="max-width:250px;"><option value="" id="optMergeTgt">New name (to keep)...</option></select>
+    <button id="btnMerge" class="action-btn">Merge Clients</button>
   </div>
 </div>
 
 <div id="dashboard" hidden>
   <div class="cards">
-    <div class="card">Fatturato totale<div class="value" id="total"></div></div>
-    <div class="card">Fatture<div class="value" id="invoiceCount"></div></div>
-    <div class="card">Clienti unici<div class="value" id="clientCount"></div></div>
-    <div class="card">Fatturato medio annuo<div class="value" id="avgYear"></div></div>
-    <div class="card">Fattura media globale<div class="value" id="avgInvoiceGlobal"></div></div>
-    <div class="card">Concentrazione Fatturato<div class="value" id="paretoValue"></div><div class="sub-value" id="paretoSub"></div></div>
-    <div class="card">Anno migliore<div class="value" id="bestYear"></div></div>
+    <div class="card"><span id="lblTotal">Total Revenue</span><div class="value" id="total"></div></div>
+    <div class="card"><span id="lblInvoices">Invoices</span><div class="value" id="invoiceCount"></div></div>
+    <div class="card"><span id="lblUniqueClients">Unique Clients</span><div class="value" id="clientCount"></div></div>
+    <div class="card"><span id="lblAvgYear">Avg Annual Revenue</span><div class="value" id="avgYear"></div></div>
+    <div class="card"><span id="lblAvgInvoice">Avg Invoice Value</span><div class="value" id="avgInvoiceGlobal"></div></div>
+    <div class="card"><span id="lblPareto">Revenue Concentration</span><div class="value" id="paretoValue"></div><div class="sub-value" id="paretoSub"></div></div>
+    <div class="card"><span id="lblBestYear">Best Year</span><div class="value" id="bestYear"></div></div>
   </div>
 
   <div class="box">
-    <h2>Top 15 clienti di tutti i tempi</h2>
+    <h2 id="lblTop15">Top 15 Clients of All Time</h2>
     <table>
       <thead>
-        <tr><th>#</th><th class="text-left">Cliente</th><th class="num">Fatturato</th><th>Fatture</th><th>Prima fattura</th><th>Ultima fattura</th><th class="num">% totale</th></tr>
+        <tr><th id="thRank">#</th><th class="text-left" id="thClient">Client</th><th class="num" id="thRevenue">Revenue</th><th id="thInvoices">Invoices</th><th id="thFirst">First Invoice</th><th id="thLast">Last Invoice</th><th class="num" id="thShare">% Share</th></tr>
       </thead>
       <tbody id="top15"></tbody>
     </table>
   </div>
 
   <div class="box">
-    <h2>Andamento Fatturato negli Anni</h2>
+    <h2 id="lblTrend">Revenue Trend Over Years</h2>
     <div class="chart-container">
       <canvas id="yearlyChart"></canvas>
     </div>
   </div>
 
   <div class="box">
-    <h2>Analisi cliente</h2>
+    <h2 id="lblClientAnalysis">Client Analysis</h2>
     <div class="flex-center">
-      <select id="clientSelect"><option value="">Seleziona un cliente…</option></select>
+      <select id="clientSelect"><option value="">Select a client…</option></select>
     </div>
     <div id="clientDetails" hidden>
       <div class="cards" style="margin-bottom:20px;">
-        <div class="card">Fatturato totale<div class="value" id="cTotal"></div></div>
-        <div class="card">Peso sul fatturato complessivo<div class="value" id="cPeso"></div></div>
-        <div class="card">Numero fatture<div class="value" id="cInvoices"></div></div>
-        <div class="card">Fattura media<div class="value" id="cAverage"></div></div>
-        <div class="card">Indice affidabilità bayesiana<div class="value" id="cBayesScore"></div><div class="sub-value" id="cBayesRating"></div></div>
-        <div class="card">Prima fattura<div class="value" id="cFirst"></div></div>
-        <div class="card">Ultima fattura<div class="value" id="cLast"></div></div>
-        <div class="card">Anno migliore<div class="value" id="cBest"></div></div>
+        <div class="card"><span id="lblCTotal">Total Revenue</span><div class="value" id="cTotal"></div></div>
+        <div class="card"><span id="lblCShare">Share of Total</span><div class="value" id="cPeso"></div></div>
+        <div class="card"><span id="lblCInvoices">Invoices</span><div class="value" id="cInvoices"></div></div>
+        <div class="card"><span id="lblCAvg">Avg Invoice Value</span><div class="value" id="cAverage"></div></div>
+        <div class="card"><span id="lblCBayes">Bayesian Reliability Score</span><div class="value" id="cBayesScore"></div><div class="sub-value" id="cBayesRating"></div></div>
+        <div class="card"><span id="lblCFirst">First Invoice</span><div class="value" id="cFirst"></div></div>
+        <div class="card"><span id="lblCLast">Last Invoice</span><div class="value" id="cLast"></div></div>
+        <div class="card"><span id="lblCBest">Best Year</span><div class="value" id="cBest"></div></div>
       </div>
-      <h3>Fatturato per anno</h3>
+      <h3 id="lblCYears">Revenue Per Year</h3>
       <table>
-        <thead><tr><th>Anno</th><th class="num">Fatturato</th><th>Fatture</th></tr></thead>
+        <thead><tr><th id="thAn">Year</th><th class="num" id="thRev">Revenue</th><th id="thInv">Invoices</th></tr></thead>
         <tbody id="clientYears"></tbody>
       </table>
     </div>
   </div>
 
   <div class="box">
-    <h2>Top 10 per indice affidabilità bayesiana</h2>
-    <p style="color:#718096;margin-top:-10px;">Punteggio di affidabilità da 0 a 100 basato su volume, costanza e attualità dell'ultimo rapporto attivo.</p>
+    <h2 id="lblTopBayes">Top 10 by Bayesian Reliability Score</h2>
+    <p id="descBayes" style="color:#718096;margin-top:-10px;">Reliability rating from 0 to 100 based on volume, consistency, and active relationship freshness.</p>
     <table>
       <thead>
-        <tr><th>#</th><th class="text-left">Cliente</th><th>Punteggio di affidabilità (0-100)</th><th>Fatture</th><th>Ultimo anno attivo</th></tr>
+        <tr><th>#</th><th class="text-left" id="thBayesClient">Client</th><th id="thBayesScore">Reliability Score (0-100)</th><th id="thBayesInv">Invoices</th><th id="thBayesLast">Last Active Year</th></tr>
       </thead>
       <tbody id="topBayes"></tbody>
     </table>
   </div>
 
   <div class="box">
-    <h2>Statistiche Paesi (Top Locations)</h2>
+    <h2 id="lblCountries">Country Statistics (Top Locations)</h2>
     <table>
-      <thead><tr><th>#</th><th class="text-left">Paese</th><th class="num">Fatturato</th><th>Fatture</th><th class="num">% del Totale</th></tr></thead>
+      <thead><tr><th>#</th><th class="text-left" id="thCountry">Country</th><th class="num" id="thCRevenue">Revenue</th><th id="thCInvoices">Invoices</th><th class="num" id="thCShare">% Share</th></tr></thead>
       <tbody id="countryStats"></tbody>
     </table>
   </div>
@@ -157,6 +170,94 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script>
+// Dizionario Bilingue (Italiano / Inglese)
+const langs = {
+  en: {
+    mainTitle: "Revenue Analysis",
+    uploadPrompt: "Upload your master Excel file to process the data locally in your browser.",
+    btnUpload: "🔄 Load Excel File",
+    mergeTitle: "Manage Client Name Changes (Merge)",
+    mergeDesc: "Merge the history of two clients that changed their company name.",
+    optMergeSrc: "Old name (to delete)...",
+    optMergeTgt: "New name (to keep)...",
+    btnMerge: "Merge Clients",
+    lblTotal: "Total Revenue",
+    lblInvoices: "Invoices",
+    lblUniqueClients: "Unique Clients",
+    lblAvgYear: "Avg Annual Revenue",
+    lblAvgInvoice: "Avg Invoice Value",
+    lblPareto: "Revenue Concentration",
+    lblBestYear: "Best Year",
+    lblTop15: "Top 15 Clients of All Time",
+    thRank: "#", thClient: "Client", thRevenue: "Revenue", thInvoices: "Invoices", thFirst: "First Invoice", thLast: "Last Invoice", thShare: "% Share",
+    lblTrend: "Revenue Trend Over Years",
+    lblClientAnalysis: "Client Analysis",
+    optSelectClient: "Select a client…",
+    lblCTotal: "Total Revenue", lblCShare: "Share of Total", lblCInvoices: "Invoices", lblCAvg: "Avg Invoice Value", lblCBayes: "Bayesian Reliability Score", lblCFirst: "First Invoice", lblCLast: "Last Invoice", lblCBest: "Best Year",
+    lblCYears: "Revenue Per Year",
+    thAn: "Year", thRev: "Revenue", thInv: "Invoices",
+    lblTopBayes: "Top 10 by Bayesian Reliability Score",
+    descBayes: "Reliability rating from 0 to 100 based on volume, consistency, and active relationship freshness.",
+    thBayesClient: "Client", thBayesScore: "Reliability Score (0-100)", thBayesInv: "Invoices", thBayesLast: "Last Active Year",
+    lblCountries: "Country Statistics (Top Locations)",
+    thCountry: "Country", thCRevenue: "Revenue", thCInvoices: "Invoices", thCShare: "% Share",
+    errNoColumns: "Cannot find required columns in the first sheet.",
+    errFile: "Error: ",
+    points: "pti",
+    paretoText: "clients generate 80% of revenue",
+    totalSuffix: "of total",
+    statusInactive: "Inactive (over 8 years) 🛑",
+    statusExcellent: "Excellent & Active 🌟",
+    statusHigh: "High Consistency 👍",
+    statusMedium: "Medium-Low Consistency",
+    statusUnstable: "Unstable/Occasional 💤",
+    lastActive: "last active"
+  },
+  it: {
+    mainTitle: "Analisi fatturato",
+    uploadPrompt: "Carica il file Excel master per elaborare i dati localmente nel tuo browser.",
+    btnUpload: "🔄 Carica file Excel",
+    mergeTitle: "Gestione cambi nome cliente (Merge)",
+    mergeDesc: "Unisci la storia di due clienti che hanno cambiato ragione sociale.",
+    optMergeSrc: "Vecchio nome (da eliminare)...",
+    optMergeTgt: "Nuovo nome (da mantenere)...",
+    btnMerge: "Unisci Clienti",
+    lblTotal: "Fatturato totale",
+    lblInvoices: "Fatture",
+    lblUniqueClients: "Clienti unici",
+    lblAvgYear: "Fatturato medio annuo",
+    lblAvgInvoice: "Fattura media globale",
+    lblPareto: "Concentrazione Fatturato",
+    lblBestYear: "Anno migliore",
+    lblTop15: "Top 15 clienti di tutti i tempi",
+    thRank: "#", thClient: "Cliente", thRevenue: "Fatturato", thInvoices: "Fatture", thFirst: "Prima fattura", thLast: "Ultima fattura", thShare: "% totale",
+    lblTrend: "Andamento Fatturato negli Anni",
+    lblClientAnalysis: "Analisi cliente",
+    optSelectClient: "Seleziona un cliente…",
+    lblCTotal: "Fatturato totale", lblCShare: "Peso sul fatturato complessivo", lblCInvoices: "Numero fatture", lblCAvg: "Fattura media", lblCBayes: "Indice affidabilità bayesiana", lblCFirst: "Prima fattura", lblCLast: "Ultima fattura", lblCBest: "Anno migliore",
+    lblCYears: "Fatturato per anno",
+    thAn: "Anno", thRev: "Fatturato", thInv: "Fatture",
+    lblTopBayes: "Top 10 per indice affidabilità bayesiana",
+    descBayes: "Punteggio di affidabilità da 0 a 100 basato su volume, costanza e attualità dell'ultimo rapporto attivo.",
+    thBayesClient: "Cliente", thBayesScore: "Punteggio di affidabilità (0-100)", thBayesInv: "Fatture", thBayesLast: "Ultimo anno attivo",
+    lblCountries: "Statistiche Paesi (Top Locations)",
+    thCountry: "Paese", thCRevenue: "Fatturato", thCInvoices: "Fatture", thCShare: "% del Totale",
+    errNoColumns: "Non trovo le colonne richieste nel primo foglio.",
+    errFile: "Errore: ",
+    points: "pti",
+    paretoText: "clienti generano l'80% delle entrate",
+    totalSuffix: "del totale",
+    statusInactive: "Inattivo (oltre 8 anni) 🛑",
+    statusExcellent: "Eccellente & Attivo 🌟",
+    statusHigh: "Alta Costanza 👍",
+    statusMedium: "Medio-Bassa Costanza",
+    statusUnstable: "Instabile/Occasionale 💤",
+    lastActive: "ultimo attivo"
+  }
+};
+
+let currentLang = 'en';
+
 const euro = new Intl.NumberFormat('it-IT', {
   style: 'currency',
   currency: 'EUR',
@@ -167,6 +268,77 @@ const euro = new Intl.NumberFormat('it-IT', {
 const df = new Intl.DateTimeFormat('it-IT');
 let clients={}, yearly={}, countries={}, totalSales=0, invoiceTotalCount=0, myChart=null, maxActiveYear=2026;
 
+// Funzione per aggiornare l'interfaccia linguistica
+function setLanguage(lang) {
+  currentLang = lang;
+  document.documentElement.lang = lang;
+  
+  // Elementi testuali statici
+  const t = langs[lang];
+  document.getElementById('mainTitle').innerText = t.mainTitle;
+  document.getElementById('uploadPrompt').innerText = t.uploadPrompt;
+  document.getElementById('btnUpload').innerText = t.btnUpload;
+  document.getElementById('mergeTitle').innerText = t.mergeTitle;
+  document.getElementById('mergeDesc').innerText = t.mergeDesc;
+  document.getElementById('optMergeSrc').innerText = t.optMergeSrc;
+  document.getElementById('optMergeTgt').innerText = t.optMergeTgt;
+  document.getElementById('btnMerge').innerText = t.btnMerge;
+  document.getElementById('lblTotal').innerText = t.lblTotal;
+  document.getElementById('lblInvoices').innerText = t.lblInvoices;
+  document.getElementById('lblUniqueClients').innerText = t.lblUniqueClients;
+  document.getElementById('lblAvgYear').innerText = t.lblAvgYear;
+  document.getElementById('lblAvgInvoice').innerText = t.lblAvgInvoice;
+  document.getElementById('lblPareto').innerText = t.lblPareto;
+  document.getElementById('lblBestYear').innerText = t.lblBestYear;
+  document.getElementById('lblTop15').innerText = t.lblTop15;
+  document.getElementById('thRank').innerText = t.thRank;
+  document.getElementById('thClient').innerText = t.thClient;
+  document.getElementById('thRevenue').innerText = t.thRevenue;
+  document.getElementById('thInvoices').innerText = t.thInvoices;
+  document.getElementById('thFirst').innerText = t.thFirst;
+  document.getElementById('thLast').innerText = t.thLast;
+  document.getElementById('thShare').innerText = t.thShare;
+  document.getElementById('lblTrend').innerText = t.lblTrend;
+  document.getElementById('lblClientAnalysis').innerText = t.lblClientAnalysis;
+  document.getElementById('lblCTotal').innerText = t.lblCTotal;
+  document.getElementById('lblCShare').innerText = t.lblCShare;
+  document.getElementById('lblCInvoices').innerText = t.lblCInvoices;
+  document.getElementById('lblCAvg').innerText = t.lblCAvg;
+  document.getElementById('lblCBayes').innerText = t.lblCBayes;
+  document.getElementById('lblCFirst').innerText = t.lblCFirst;
+  document.getElementById('lblCLast').innerText = t.lblCLast;
+  document.getElementById('lblCBest').innerText = t.lblCBest;
+  document.getElementById('lblCYears').innerText = t.lblCYears;
+  document.getElementById('thAn').innerText = t.thAn;
+  document.getElementById('thRev').innerText = t.thRev;
+  document.getElementById('thInv').innerText = t.thInv;
+  document.getElementById('lblTopBayes').innerText = t.lblTopBayes;
+  document.getElementById('descBayes').innerText = t.descBayes;
+  document.getElementById('thBayesClient').innerText = t.thBayesClient;
+  document.getElementById('thBayesScore').innerText = t.thBayesScore;
+  document.getElementById('thBayesInv').innerText = t.thBayesInv;
+  document.getElementById('thBayesLast').innerText = t.thBayesLast;
+  document.getElementById('lblCountries').innerText = t.lblCountries;
+  document.getElementById('thCountry').innerText = t.thCountry;
+  document.getElementById('thCRevenue').innerText = t.thCRevenue;
+  document.getElementById('thCInvoices').innerText = t.thCInvoices;
+  document.getElementById('thCShare').innerText = t.thCShare;
+
+  // Rigenera i dati dinamici se presenti
+  if (Object.keys(clients).length > 0) {
+    renderDashboard();
+    // Aggiorna anche l'analisi del singolo cliente selezionato se attiva
+    const selectedClient = document.getElementById('clientSelect').value;
+    if (selectedClient) {
+      document.getElementById('clientSelect').dispatchEvent(new Event('change'));
+    }
+  }
+}
+
+document.getElementById('langSelect').addEventListener('change', e => {
+  setLanguage(e.target.value);
+});
+
 function amt(v){if(typeof v==='number')return v;let s=String(v??'').trim().replace(/\s/g,'').replace(/€/g,'');if(s.includes(',')&&s.includes('.'))s=s.replace(/\./g,'').replace(',','.');else s=s.replace(',','.');return Number(s)||0}
 function dat(v){if(v instanceof Date&&!isNaN(v))return v;if(typeof v==='number'){let d=XLSX.SSF.parse_date_code(v);if(d)return new Date(d.y,d.m-1,d.d)}let s=String(v??'').trim(),m=s.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})$/);if(m)return new Date(+m[3],+m[2]-1,+m[1]);let d=new Date(s);return isNaN(d)?null:d}
 function esc(s){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
@@ -175,11 +347,11 @@ file.addEventListener('change',async e=>{
   try{
     error.textContent='';
     let b=await e.target.files[0].arrayBuffer(),w=XLSX.read(b,{type:'array',cellDates:true}),r=XLSX.utils.sheet_to_json(w.Sheets[w.SheetNames[0]],{defval:null});
-    if(!r.length||['Ragione Sociale','Imponibile','Data documento'].some(k=>!(k in r[0])))throw Error('Non trovo le colonne richieste nel primo foglio.');
+    if(!r.length||['Ragione Sociale','Imponibile','Data documento'].some(k=>!(k in r[0])))throw Error(langs[currentLang].errNoColumns);
     parseData(r);
     renderDashboard();
   }catch(x){
-    error.textContent='Errore: '+x.message;
+    error.textContent=langs[currentLang].errFile+x.message;
   }
 });
 
@@ -233,9 +405,10 @@ function getBayesianScore(c) {
 
 function renderDashboard(){
   let ys=Object.keys(yearly).sort((a,b)=>a-b),best=[...ys].sort((a,b)=>yearly[b]-yearly[a])[0];
+  const t = langs[currentLang];
   
   total.textContent=euro.format(totalSales);
-  invoiceCount.textContent=invoiceTotalCount.toLocaleString('it-IT');
+  invoiceCount.textContent=invoiceTotalCount.toLocaleString(currentLang==='it'?'it-IT':'en-US');
   clientCount.textContent=Object.keys(clients).length;
   avgYear.textContent=euro.format(ys.length?totalSales/ys.length:0);
   avgInvoiceGlobal.textContent=invoiceTotalCount?euro.format(totalSales/invoiceTotalCount):'—';
@@ -248,8 +421,8 @@ function renderDashboard(){
     if(runningSum>=totalSales*0.8) break;
   }
   let pctClients=Object.keys(clients).length?((paretoCount/Object.keys(clients).length)*100).toFixed(0):0;
-  paretoValue.textContent=`${paretoCount} clienti`;
-  paretoSub.textContent=`generano l'80% delle entrate (${pctClients}% del totale)`;
+  paretoValue.textContent=`${paretoCount} ${currentLang==='it'?'clienti':'clients'}`;
+  paretoSub.textContent=`${t.paretoText} (${pctClients}% ${t.totalSuffix})`;
 
   bestYear.textContent=best?best+' · '+euro.format(yearly[best]):'—';
 
@@ -270,15 +443,17 @@ function renderDashboard(){
   topBayes.innerHTML = bayesianSorted.slice(0, 10).map((c, i) => `<tr>
     <td>${i+1}</td>
     <td class="text-left"><span class="badge-name">${esc(c.name)}</span></td>
-    <td style="font-weight:700;color:#c2410c;font-size:1.15rem;">${c.score} pti</td>
+    <td style="font-weight:700;color:#c2410c;font-size:1.15rem;">${c.score} ${t.points}</td>
     <td>${c.count}</td>
     <td>${c.last.getFullYear()}</td>
   </tr>`).join('');
 
-  let sortedNames=Object.keys(clients).sort((a,b)=>a.localeCompare(b,'it'));
-  clientSelect.innerHTML='<option value="">Seleziona un cliente…</option>'+sortedNames.map(n=>`<option>${esc(n)}</option>`).join('');
-  mergeSource.innerHTML='<option value="">Vecchio nome (da eliminare)...</option>'+sortedNames.map(n=>`<option>${esc(n)}</option>`).join('');
-  mergeTarget.innerHTML='<option value="">Nuovo nome (da mantenere)...</option>'+sortedNames.map(n=>`<option>${esc(n)}</option>`).join('');
+  let sortedNames=Object.keys(clients).sort((a,b)=>a.localeCompare(b,currentLang));
+  clientSelect.innerHTML=`<option value="">${t.optSelectClient}</option>`+sortedNames.map(n=>`<option>${esc(n)}</option>`).join('');
+  
+  // Ripopolamento merge dropdowns mantenendo l'opzione vuota descrittiva
+  mergeSource.innerHTML=`<option value="">${t.optMergeSrc}</option>`+sortedNames.map(n=>`<option>${esc(n)}</option>`).join('');
+  mergeTarget.innerHTML=`<option value="">${t.optMergeTgt}</option>`+sortedNames.map(n=>`<option>${esc(n)}</option>`).join('');
 
   countryStats.innerHTML=Object.values(countries).sort((a,b)=>b.total-a.total).map((co,i)=>`<tr>
     <td>${i+1}</td>
@@ -300,13 +475,14 @@ function renderChart(yearsList){
   if(myChart) myChart.destroy();
   
   let chartData=yearsList.map(y=>yearly[y]);
+  const chartLabel = currentLang==='it'?'Fatturato Annuo (€)':'Annual Revenue (€)';
   
   myChart=new Chart(ctx,{
     type:'line',
     data:{
       labels:yearsList,
       datasets:[{
-        label:'Fatturato Annuo (€)',
+        label:chartLabel,
         data:chartData,
         borderColor:'#d97706',
         backgroundColor:'rgba(217,119,6,0.1)',
@@ -326,7 +502,7 @@ function renderChart(yearsList){
         legend:{display:false},
         tooltip:{
           callbacks:{
-            label:context=>'Fatturato: '+euro.format(context.raw)
+            label:context=> (currentLang==='it'?'Fatturato: ':'Revenue: ')+euro.format(context.raw)
           }
         }
       },
@@ -365,6 +541,7 @@ btnMerge.addEventListener('click',()=>{
 clientSelect.addEventListener('change',e=>{
   let c=clients[e.target.value];
   if(!c){clientDetails.hidden=true;return}
+  const t = langs[currentLang];
   cTotal.textContent=euro.format(c.total);
   cPeso.textContent=totalSales?((c.total/totalSales)*100).toFixed(1)+'%':'0%';
   cInvoices.textContent=c.count;
@@ -373,22 +550,22 @@ clientSelect.addEventListener('change',e=>{
   cAverage.textContent=c.count?euro.format(avgInvoice):'—';
   
   let bayesianScore = getBayesianScore(c);
-  cBayesScore.textContent = bayesianScore + " pti";
+  cBayesScore.textContent = bayesianScore + ` ${t.points}`;
   
-  let rating = "Instabile/Occasionale 💤";
+  let rating = t.statusUnstable;
   let lastInvoiceYear = c.last.getFullYear();
   let yearsPassed = maxActiveYear - lastInvoiceYear;
   
   if (yearsPassed >= 8) {
-    rating = "Inattivo (oltre 8 anni) 🛑";
+    rating = t.statusInactive;
   } else if (c.count >= 10 && bayesianScore >= 70) {
-    rating = "Eccellente & Attivo 🌟";
+    rating = t.statusExcellent;
   } else if (c.count >= 5 && yearsPassed <= 2) {
-    rating = "Alta Costanza 👍";
+    rating = t.statusHigh;
   } else if (c.count >= 2 && yearsPassed <= 4) {
-    rating = "Medio-Bassa Costanza";
+    rating = t.statusMedium;
   }
-  cBayesRating.textContent = `${rating} (ultimo attivo: ${lastInvoiceYear})`;
+  cBayesRating.textContent = `${rating} (${t.lastActive}: ${lastInvoiceYear})`;
 
   cFirst.textContent=df.format(c.first);
   cLast.textContent=df.format(c.last);
@@ -397,4 +574,7 @@ clientSelect.addEventListener('change',e=>{
   clientYears.innerHTML=ys.map(y=>`<tr><td>${y}</td><td class="num">${euro.format(c.years[y].total)}</td><td>${c.years[y].count}</td></tr>`).join('');
   clientDetails.hidden=false;
 });
+
+// Applica la lingua predefinita iniziale (inglese)
+setLanguage('en');
 </script></body></html>
