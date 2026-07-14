@@ -1,0 +1,400 @@
+<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Analisi fatturato</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💰</text></svg>">
+<style>
+  body{font-family:system-ui,-apple-system,sans-serif;max-width:1100px;margin:40px auto;padding:0 20px;color:#2d3748;background-color:#fcfbf7}
+  h1,h2,h3{color:#1a202c;text-align:center}
+  h1{border-bottom:3px solid #ecc94b;padding-bottom:15px;margin-bottom:30px}
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}
+  .card,.box{background:#fff;border-radius:12px;padding:20px;margin:20px 0;box-shadow:0 4px 6px -1px rgba(0,0,0,0.05),0 2px 4px -1px rgba(0,0,0,0.03);border:1px solid #f3f0e0}
+  .card{border-left:4px solid #ecc94b}
+  
+  table{width:100%;max-width:900px;border-collapse:collapse;margin:20px auto 10px auto;background:#fff;border-radius:8px;overflow:hidden}
+  th,td{padding:12px 10px;border-bottom:1px solid #edf2f7;text-align:center}
+  th{background-color:#fefcf0;color:#744210;font-weight:600}
+  tr:hover td{background-color:#fffdf5}
+  
+  .badge-name{background-color:#fff7ed;color:#c2410c;padding:4px 10px;border-radius:12px;font-weight:500;display:inline-block}
+  
+  .text-left{text-align:left}
+  .num{text-align:right}
+  .value{font-size:1.3rem;font-weight:700;margin-top:6px;color:#d69e2e;line-height:1.2}
+  .sub-value{font-size:0.85rem;color:#718096;font-weight:normal;margin-top:4px}
+  
+  .flex-center{display:flex;justify-content:center;margin:15px 0}
+  select{font:inherit;padding:10px;width:100%;max-width:500px;border:1px solid #cbd5e0;border-radius:6px;outline:none;text-align:center}
+  select:focus{border-color:#ecc94b;box-shadow:0 0 0 3px rgba(236,201,75,0.2)}
+  #error{color:#e53e3e;font-weight:500;text-align:center}
+  .merge-zone{display:flex;gap:12px;align-items:center;justify-content:center;flex-wrap:wrap;margin-top:12px}
+  
+  .file-input-wrapper {position:relative;overflow:hidden;display:inline-block}
+  .btn-goodreads {
+    border:none;
+    color:white;
+    background-color:#d97706;
+    padding:12px 24px;
+    border-radius:10px;
+    font-size:1.05rem;
+    font-weight:bold;
+    cursor:pointer;
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    box-shadow:0 2px 4px rgba(0,0,0,0.1);
+    transition:background-color 0.2s,transform 0.1s;
+  }
+  .btn-goodreads:hover {background-color:#b45309}
+  .btn-goodreads:active {transform:scale(0.98)}
+  .file-input-wrapper input[type=file] {
+    font-size:100px;
+    position:absolute;
+    left:0;
+    top:0;
+    opacity:0;
+    cursor:pointer;
+  }
+
+  button.action-btn{font:inherit;padding:10px 18px;background:#ecc94b;color:#744210;font-weight:600;border:none;border-radius:6px;cursor:pointer;transition:all 0.2s}
+  button.action-btn:hover{background:#d69e2e;color:#fff}
+  .chart-container{position:relative;height:300px;width:100%;max-width:900px;margin:15px auto}
+  p{text-align:center}
+</style>
+</head><body>
+<h1>Analisi fatturato</h1>
+<p>Carica il file Excel master per elaborare i dati localmente nel tuo browser.</p>
+
+<div class="flex-center">
+  <div class="file-input-wrapper">
+    <button class="btn-goodreads">🔄 Carica file Excel</button>
+    <input id="file" type="file" accept=".xlsx,.xls">
+  </div>
+</div>
+<p id="error"></p>
+
+<div id="mergeSection" class="box" hidden>
+  <h2>Gestione cambi nome cliente (Merge)</h2>
+  <p style="color:#718096;margin:0 0 10px 0">Unisci la storia di due clienti che hanno cambiato ragione sociale.</p>
+  <div class="merge-zone">
+    <select id="mergeSource" style="max-width:250px;"><option value="">Vecchio nome (da eliminare)...</option></select>
+    <span style="font-weight:bold;color:#718096">➡️ in ➡️</span>
+    <select id="mergeTarget" style="max-width:250px;"><option value="">Nuovo nome (da mantenere)...</option></select>
+    <button id="btnMerge" class="action-btn">Unisci Clienti</button>
+  </div>
+</div>
+
+<div id="dashboard" hidden>
+  <div class="cards">
+    <div class="card">Fatturato totale<div class="value" id="total"></div></div>
+    <div class="card">Fatture<div class="value" id="invoiceCount"></div></div>
+    <div class="card">Clienti unici<div class="value" id="clientCount"></div></div>
+    <div class="card">Fatturato medio annuo<div class="value" id="avgYear"></div></div>
+    <div class="card">Fattura media globale<div class="value" id="avgInvoiceGlobal"></div></div>
+    <div class="card">Concentrazione Fatturato<div class="value" id="paretoValue"></div><div class="sub-value" id="paretoSub"></div></div>
+    <div class="card">Anno migliore<div class="value" id="bestYear"></div></div>
+  </div>
+
+  <div class="box">
+    <h2>Top 15 clienti di tutti i tempi</h2>
+    <table>
+      <thead>
+        <tr><th>#</th><th class="text-left">Cliente</th><th class="num">Fatturato</th><th>Fatture</th><th>Prima fattura</th><th>Ultima fattura</th><th class="num">% totale</th></tr>
+      </thead>
+      <tbody id="top15"></tbody>
+    </table>
+  </div>
+
+  <div class="box">
+    <h2>Andamento Fatturato negli Anni</h2>
+    <div class="chart-container">
+      <canvas id="yearlyChart"></canvas>
+    </div>
+  </div>
+
+  <div class="box">
+    <h2>Analisi cliente</h2>
+    <div class="flex-center">
+      <select id="clientSelect"><option value="">Seleziona un cliente…</option></select>
+    </div>
+    <div id="clientDetails" hidden>
+      <div class="cards" style="margin-bottom:20px;">
+        <div class="card">Fatturato totale<div class="value" id="cTotal"></div></div>
+        <div class="card">Peso sul fatturato complessivo<div class="value" id="cPeso"></div></div>
+        <div class="card">Numero fatture<div class="value" id="cInvoices"></div></div>
+        <div class="card">Fattura media<div class="value" id="cAverage"></div></div>
+        <div class="card">Indice affidabilità bayesiana<div class="value" id="cBayesScore"></div><div class="sub-value" id="cBayesRating"></div></div>
+        <div class="card">Prima fattura<div class="value" id="cFirst"></div></div>
+        <div class="card">Ultima fattura<div class="value" id="cLast"></div></div>
+        <div class="card">Anno migliore<div class="value" id="cBest"></div></div>
+      </div>
+      <h3>Fatturato per anno</h3>
+      <table>
+        <thead><tr><th>Anno</th><th class="num">Fatturato</th><th>Fatture</th></tr></thead>
+        <tbody id="clientYears"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="box">
+    <h2>Top 10 per indice affidabilità bayesiana</h2>
+    <p style="color:#718096;margin-top:-10px;">Punteggio di affidabilità da 0 a 100 basato su volume, costanza e attualità dell'ultimo rapporto attivo.</p>
+    <table>
+      <thead>
+        <tr><th>#</th><th class="text-left">Cliente</th><th>Punteggio di affidabilità (0-100)</th><th>Fatture</th><th>Ultimo anno attivo</th></tr>
+      </thead>
+      <tbody id="topBayes"></tbody>
+    </table>
+  </div>
+
+  <div class="box">
+    <h2>Statistiche Paesi (Top Locations)</h2>
+    <table>
+      <thead><tr><th>#</th><th class="text-left">Paese</th><th class="num">Fatturato</th><th>Fatture</th><th class="num">% del Totale</th></tr></thead>
+      <tbody id="countryStats"></tbody>
+    </table>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+const euro = new Intl.NumberFormat('it-IT', {
+  style: 'currency',
+  currency: 'EUR',
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+  useGrouping: true
+});
+const df = new Intl.DateTimeFormat('it-IT');
+let clients={}, yearly={}, countries={}, totalSales=0, invoiceTotalCount=0, myChart=null, maxActiveYear=2026;
+
+function amt(v){if(typeof v==='number')return v;let s=String(v??'').trim().replace(/\s/g,'').replace(/€/g,'');if(s.includes(',')&&s.includes('.'))s=s.replace(/\./g,'').replace(',','.');else s=s.replace(',','.');return Number(s)||0}
+function dat(v){if(v instanceof Date&&!isNaN(v))return v;if(typeof v==='number'){let d=XLSX.SSF.parse_date_code(v);if(d)return new Date(d.y,d.m-1,d.d)}let s=String(v??'').trim(),m=s.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})$/);if(m)return new Date(+m[3],+m[2]-1,+m[1]);let d=new Date(s);return isNaN(d)?null:d}
+function esc(s){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
+
+file.addEventListener('change',async e=>{
+  try{
+    error.textContent='';
+    let b=await e.target.files[0].arrayBuffer(),w=XLSX.read(b,{type:'array',cellDates:true}),r=XLSX.utils.sheet_to_json(w.Sheets[w.SheetNames[0]],{defval:null});
+    if(!r.length||['Ragione Sociale','Imponibile','Data documento'].some(k=>!(k in r[0])))throw Error('Non trovo le colonne richieste nel primo foglio.');
+    parseData(r);
+    renderDashboard();
+  }catch(x){
+    error.textContent='Errore: '+x.message;
+  }
+});
+
+function parseData(rows){
+  clients={};yearly={};countries={};totalSales=0;invoiceTotalCount=0;maxActiveYear=2026;
+  rows.forEach(r=>{
+    let name=String(r['Ragione Sociale']??'').trim(),
+        a=amt(r['Imponibile']),
+        d=dat(r['Data documento']),
+        country=String(r['Paese']||r['Nazione']||r['Stato']||'Non specificato').trim();
+    if(!name||!d)return;
+    let y=d.getFullYear();
+    if(y > maxActiveYear) maxActiveYear = y;
+    totalSales+=a;
+    invoiceTotalCount++;
+    yearly[y]=(yearly[y]||0)+a;
+    
+    if(!countries[country])countries[country]={name:country,total:0,count:0};
+    countries[country].total+=a;
+    countries[country].count++;
+
+    if(!clients[name])clients[name]={name,total:0,count:0,first:d,last:d,years:{}};
+    let c=clients[name];
+    c.total+=a;
+    c.count++;
+    if(d<c.first)c.first=d;
+    if(d>c.last)c.last=d;
+    if(!c.years[y])c.years[y]={total:0,count:0};
+    c.years[y].total+=a;
+    c.years[y].count++;
+  });
+}
+
+function getBayesianScore(c) {
+  let avgInvoice = c.count ? (c.total / c.count) : 0;
+  let globalAvgInvoice = invoiceTotalCount ? (totalSales / invoiceTotalCount) : 0;
+  let m = 3; 
+  
+  let rawBayesian = ((c.count * avgInvoice) + (m * globalAvgInvoice)) / (c.count + m);
+  
+  let lastInvoiceYear = c.last.getFullYear();
+  let yearsPassed = maxActiveYear - lastInvoiceYear;
+  let decayFactor = Math.max(0, 1 - (yearsPassed / 8));
+  
+  let score = rawBayesian * decayFactor;
+  let maxRef = globalAvgInvoice * 3;
+  
+  let normalized = Math.min(100, Math.round((score / maxRef) * 100));
+  return isNaN(normalized) ? 0 : normalized;
+}
+
+function renderDashboard(){
+  let ys=Object.keys(yearly).sort((a,b)=>a-b),best=[...ys].sort((a,b)=>yearly[b]-yearly[a])[0];
+  
+  total.textContent=euro.format(totalSales);
+  invoiceCount.textContent=invoiceTotalCount.toLocaleString('it-IT');
+  clientCount.textContent=Object.keys(clients).length;
+  avgYear.textContent=euro.format(ys.length?totalSales/ys.length:0);
+  avgInvoiceGlobal.textContent=invoiceTotalCount?euro.format(totalSales/invoiceTotalCount):'—';
+
+  let sortedClients=Object.values(clients).sort((a,b)=>b.total-a.total);
+  let runningSum=0,paretoCount=0;
+  for(let i=0;i<sortedClients.length;i++){
+    runningSum+=sortedClients[i].total;
+    paretoCount++;
+    if(runningSum>=totalSales*0.8) break;
+  }
+  let pctClients=Object.keys(clients).length?((paretoCount/Object.keys(clients).length)*100).toFixed(0):0;
+  paretoValue.textContent=`${paretoCount} clienti`;
+  paretoSub.textContent=`generano l'80% delle entrate (${pctClients}% del totale)`;
+
+  bestYear.textContent=best?best+' · '+euro.format(yearly[best]):'—';
+
+  top15.innerHTML=sortedClients.slice(0,15).map((c,i)=>`<tr>
+    <td>${i+1}</td>
+    <td class="text-left"><span class="badge-name">${esc(c.name)}</span></td>
+    <td class="num">${euro.format(c.total)}</td>
+    <td>${c.count}</td>
+    <td>${df.format(c.first)}</td>
+    <td>${df.format(c.last)}</td>
+    <td class="num">${totalSales?((c.total/totalSales)*100).toFixed(1):0}%</td>
+  </tr>`).join('');
+
+  let bayesianSorted = Object.values(clients).map(c => {
+    return { ...c, score: getBayesianScore(c) };
+  }).sort((a,b) => b.score - a.score);
+
+  topBayes.innerHTML = bayesianSorted.slice(0, 10).map((c, i) => `<tr>
+    <td>${i+1}</td>
+    <td class="text-left"><span class="badge-name">${esc(c.name)}</span></td>
+    <td style="font-weight:700;color:#c2410c;font-size:1.15rem;">${c.score} pti</td>
+    <td>${c.count}</td>
+    <td>${c.last.getFullYear()}</td>
+  </tr>`).join('');
+
+  let sortedNames=Object.keys(clients).sort((a,b)=>a.localeCompare(b,'it'));
+  clientSelect.innerHTML='<option value="">Seleziona un cliente…</option>'+sortedNames.map(n=>`<option>${esc(n)}</option>`).join('');
+  mergeSource.innerHTML='<option value="">Vecchio nome (da eliminare)...</option>'+sortedNames.map(n=>`<option>${esc(n)}</option>`).join('');
+  mergeTarget.innerHTML='<option value="">Nuovo nome (da mantenere)...</option>'+sortedNames.map(n=>`<option>${esc(n)}</option>`).join('');
+
+  countryStats.innerHTML=Object.values(countries).sort((a,b)=>b.total-a.total).map((co,i)=>`<tr>
+    <td>${i+1}</td>
+    <td class="text-left"><span class="badge-name" style="background-color:#f0fdf4; color:#15803d;">${esc(co.name)}</span></td>
+    <td class="num">${euro.format(co.total)}</td>
+    <td>${co.count}</td>
+    <td class="num">${totalSales?((co.total/totalSales)*100).toFixed(1):0}%</td>
+  </tr>`).join('');
+
+  renderChart(ys);
+
+  mergeSection.hidden=false;
+  dashboard.hidden=false;
+  clientDetails.hidden=true;
+}
+
+function renderChart(yearsList){
+  let ctx=document.getElementById('yearlyChart').getContext('2d');
+  if(myChart) myChart.destroy();
+  
+  let chartData=yearsList.map(y=>yearly[y]);
+  
+  myChart=new Chart(ctx,{
+    type:'line',
+    data:{
+      labels:yearsList,
+      datasets:[{
+        label:'Fatturato Annuo (€)',
+        data:chartData,
+        borderColor:'#d97706',
+        backgroundColor:'rgba(217,119,6,0.1)',
+        borderWidth:3,
+        fill:true,
+        tension:0.3,
+        pointBackgroundColor:'#b45309',
+        pointBorderColor:'#fff',
+        pointRadius:5,
+        pointHoverRadius:7
+      }]
+    },
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      plugins:{
+        legend:{display:false},
+        tooltip:{
+          callbacks:{
+            label:context=>'Fatturato: '+euro.format(context.raw)
+          }
+        }
+      },
+      scales:{
+        y:{
+          ticks:{
+            callback:v=>euro.format(v).replace(',00','')
+          },
+          grid:{color:'#edf2f7'}
+        },
+        x:{
+          grid:{display:false}
+        }
+      }
+    }
+  });
+}
+
+btnMerge.addEventListener('click',()=>{
+  let src=mergeSource.value,tgt=mergeTarget.value;
+  if(!src||!tgt||src===tgt)return;
+  let cSrc=clients[src],cTgt=clients[tgt];
+  cTgt.total+=cSrc.total;
+  cTgt.count+=cSrc.count;
+  if(cSrc.first<cTgt.first)cTgt.first=cSrc.first;
+  if(cSrc.last>cTgt.last)cTgt.last=cSrc.last;
+  Object.keys(cSrc.years).forEach(y=>{
+    if(!cTgt.years[y])cTgt.years[y]={total:0,count:0};
+    cTgt.years[y].total+=cSrc.years[y].total;
+    cTgt.years[y].count+=cSrc.years[y].count;
+  });
+  delete clients[src];
+  renderDashboard();
+});
+
+clientSelect.addEventListener('change',e=>{
+  let c=clients[e.target.value];
+  if(!c){clientDetails.hidden=true;return}
+  cTotal.textContent=euro.format(c.total);
+  cPeso.textContent=totalSales?((c.total/totalSales)*100).toFixed(1)+'%':'0%';
+  cInvoices.textContent=c.count;
+  
+  let avgInvoice = c.count ? (c.total / c.count) : 0;
+  cAverage.textContent=c.count?euro.format(avgInvoice):'—';
+  
+  let bayesianScore = getBayesianScore(c);
+  cBayesScore.textContent = bayesianScore + " pti";
+  
+  let rating = "Instabile/Occasionale 💤";
+  let lastInvoiceYear = c.last.getFullYear();
+  let yearsPassed = maxActiveYear - lastInvoiceYear;
+  
+  if (yearsPassed >= 8) {
+    rating = "Inattivo (oltre 8 anni) 🛑";
+  } else if (c.count >= 10 && bayesianScore >= 70) {
+    rating = "Eccellente & Attivo 🌟";
+  } else if (c.count >= 5 && yearsPassed <= 2) {
+    rating = "Alta Costanza 👍";
+  } else if (c.count >= 2 && yearsPassed <= 4) {
+    rating = "Medio-Bassa Costanza";
+  }
+  cBayesRating.textContent = `${rating} (ultimo attivo: ${lastInvoiceYear})`;
+
+  cFirst.textContent=df.format(c.first);
+  cLast.textContent=df.format(c.last);
+  let ys=Object.keys(c.years).sort((a,b)=>a-b),best=[...ys].sort((a,b)=>c.years[b].total-c.years[a].total)[0];
+  cBest.textContent=best?best+' · '+euro.format(c.years[best].total):'—';
+  clientYears.innerHTML=ys.map(y=>`<tr><td>${y}</td><td class="num">${euro.format(c.years[y].total)}</td><td>${c.years[y].count}</td></tr>`).join('');
+  clientDetails.hidden=false;
+});
+</script></body></html>
