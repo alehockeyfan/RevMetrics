@@ -25,7 +25,6 @@
   select{font:inherit;padding:10px;width:100%;max-width:500px;border:1px solid #cbd5e0;border-radius:6px;outline:none;text-align:center}
   select:focus{border-color:#ecc94b;box-shadow:0 0 0 3px rgba(236,201,75,0.2)}
   
-  /* Selettore lingua */
   .lang-selector{padding:6px 12px;border:1px solid #cbd5e0;border-radius:6px;background:#fff;cursor:pointer;font-weight:500}
 
   #error{color:#e53e3e;font-weight:500;text-align:center}
@@ -151,14 +150,14 @@
     <p id="descBayes" style="color:#718096;margin-top:-10px;">Reliability rating from 0 to 100 based on volume, consistency, and active relationship freshness.</p>
     <table>
       <thead>
-        <tr><th>#</th><th class="text-left" id="thBayesClient">Client</th><th id="thBayesScore">Reliability Score (0-100)</th><th id="thBayesInv">Invoices</th><th id="thBayesLast">Last Active Year</th></tr>
+        <tr><th>#</th><th class="text-left" id="thBayesClient">Client</th><th>Punteggio di affidabilità (0-100)</th><th id="thBayesInv">Invoices</th><th id="thBayesLast">Last Active Year</th></tr>
       </thead>
       <tbody id="topBayes"></tbody>
     </table>
   </div>
 
   <div class="box">
-    <h2 id="lblCountries">Country Statistics (Top Locations)</h2>
+    <h2>Country Statistics (Top Locations)</h2>
     <table>
       <thead><tr><th>#</th><th class="text-left" id="thCountry">Country</th><th class="num" id="thCRevenue">Revenue</th><th id="thCInvoices">Invoices</th><th class="num" id="thCShare">% Share</th></tr></thead>
       <tbody id="countryStats"></tbody>
@@ -170,7 +169,6 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script>
-// Dizionario Bilingue (Italiano / Inglese)
 const langs = {
   en: {
     mainTitle: "Revenue Analysis",
@@ -203,7 +201,7 @@ const langs = {
     thCountry: "Country", thCRevenue: "Revenue", thCInvoices: "Invoices", thCShare: "% Share",
     errNoColumns: "Cannot find required columns in the first sheet.",
     errFile: "Error: ",
-    points: "pti",
+    points: "pts",
     paretoText: "clients generate 80% of revenue",
     totalSuffix: "of total",
     statusInactive: "Inactive (over 8 years) 🛑",
@@ -258,22 +256,26 @@ const langs = {
 
 let currentLang = 'en';
 
-const euro = new Intl.NumberFormat('it-IT', {
-  style: 'currency',
-  currency: 'EUR',
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
-  useGrouping: true
-});
-const df = new Intl.DateTimeFormat('it-IT');
+// Formattatori internazionali definiti in modo pulito
+const fmtIT = new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR', minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const fmtEN = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'EUR', minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const dfIT = new Intl.DateTimeFormat('it-IT');
+const dfEN = new Intl.DateTimeFormat('en-US');
+
+function formatEuro(val) {
+  return currentLang === 'it' ? fmtIT.format(val) : fmtEN.format(val);
+}
+
+function formatDate(dateObj) {
+  return currentLang === 'it' ? dfIT.format(dateObj) : dfEN.format(dateObj);
+}
+
 let clients={}, yearly={}, countries={}, totalSales=0, invoiceTotalCount=0, myChart=null, maxActiveYear=2026;
 
-// Funzione per aggiornare l'interfaccia linguistica
 function setLanguage(lang) {
   currentLang = lang;
   document.documentElement.lang = lang;
   
-  // Elementi testuali statici
   const t = langs[lang];
   document.getElementById('mainTitle').innerText = t.mainTitle;
   document.getElementById('uploadPrompt').innerText = t.uploadPrompt;
@@ -324,10 +326,8 @@ function setLanguage(lang) {
   document.getElementById('thCInvoices').innerText = t.thCInvoices;
   document.getElementById('thCShare').innerText = t.thCShare;
 
-  // Rigenera i dati dinamici se presenti
   if (Object.keys(clients).length > 0) {
     renderDashboard();
-    // Aggiorna anche l'analisi del singolo cliente selezionato se attiva
     const selectedClient = document.getElementById('clientSelect').value;
     if (selectedClient) {
       document.getElementById('clientSelect').dispatchEvent(new Event('change'));
@@ -406,12 +406,13 @@ function getBayesianScore(c) {
 function renderDashboard(){
   let ys=Object.keys(yearly).sort((a,b)=>a-b),best=[...ys].sort((a,b)=>yearly[b]-yearly[a])[0];
   const t = langs[currentLang];
+  const localeStr = currentLang==='it'?'it-IT':'en-US';
   
-  total.textContent=euro.format(totalSales);
-  invoiceCount.textContent=invoiceTotalCount.toLocaleString(currentLang==='it'?'it-IT':'en-US');
-  clientCount.textContent=Object.keys(clients).length;
-  avgYear.textContent=euro.format(ys.length?totalSales/ys.length:0);
-  avgInvoiceGlobal.textContent=invoiceTotalCount?euro.format(totalSales/invoiceTotalCount):'—';
+  total.textContent=formatEuro(totalSales);
+  invoiceCount.textContent=invoiceTotalCount.toLocaleString(localeStr);
+  clientCount.textContent=Object.keys(clients).length.toLocaleString(localeStr);
+  avgYear.textContent=formatEuro(ys.length?totalSales/ys.length:0);
+  avgInvoiceGlobal.textContent=invoiceTotalCount?formatEuro(totalSales/invoiceTotalCount):'—';
 
   let sortedClients=Object.values(clients).sort((a,b)=>b.total-a.total);
   let runningSum=0,paretoCount=0;
@@ -424,15 +425,15 @@ function renderDashboard(){
   paretoValue.textContent=`${paretoCount} ${currentLang==='it'?'clienti':'clients'}`;
   paretoSub.textContent=`${t.paretoText} (${pctClients}% ${t.totalSuffix})`;
 
-  bestYear.textContent=best?best+' · '+euro.format(yearly[best]):'—';
+  bestYear.textContent=best?best+' · '+formatEuro(yearly[best]):'—';
 
   top15.innerHTML=sortedClients.slice(0,15).map((c,i)=>`<tr>
     <td>${i+1}</td>
     <td class="text-left"><span class="badge-name">${esc(c.name)}</span></td>
-    <td class="num">${euro.format(c.total)}</td>
-    <td>${c.count}</td>
-    <td>${df.format(c.first)}</td>
-    <td>${df.format(c.last)}</td>
+    <td class="num">${formatEuro(c.total)}</td>
+    <td>${c.count.toLocaleString(localeStr)}</td>
+    <td>${formatDate(c.first)}</td>
+    <td>${formatDate(c.last)}</td>
     <td class="num">${totalSales?((c.total/totalSales)*100).toFixed(1):0}%</td>
   </tr>`).join('');
 
@@ -444,22 +445,21 @@ function renderDashboard(){
     <td>${i+1}</td>
     <td class="text-left"><span class="badge-name">${esc(c.name)}</span></td>
     <td style="font-weight:700;color:#c2410c;font-size:1.15rem;">${c.score} ${t.points}</td>
-    <td>${c.count}</td>
+    <td>${c.count.toLocaleString(localeStr)}</td>
     <td>${c.last.getFullYear()}</td>
   </tr>`).join('');
 
   let sortedNames=Object.keys(clients).sort((a,b)=>a.localeCompare(b,currentLang));
   clientSelect.innerHTML=`<option value="">${t.optSelectClient}</option>`+sortedNames.map(n=>`<option>${esc(n)}</option>`).join('');
   
-  // Ripopolamento merge dropdowns mantenendo l'opzione vuota descrittiva
   mergeSource.innerHTML=`<option value="">${t.optMergeSrc}</option>`+sortedNames.map(n=>`<option>${esc(n)}</option>`).join('');
   mergeTarget.innerHTML=`<option value="">${t.optMergeTgt}</option>`+sortedNames.map(n=>`<option>${esc(n)}</option>`).join('');
 
   countryStats.innerHTML=Object.values(countries).sort((a,b)=>b.total-a.total).map((co,i)=>`<tr>
     <td>${i+1}</td>
     <td class="text-left"><span class="badge-name" style="background-color:#f0fdf4; color:#15803d;">${esc(co.name)}</span></td>
-    <td class="num">${euro.format(co.total)}</td>
-    <td>${co.count}</td>
+    <td class="num">${formatEuro(co.total)}</td>
+    <td>${co.count.toLocaleString(localeStr)}</td>
     <td class="num">${totalSales?((co.total/totalSales)*100).toFixed(1):0}%</td>
   </tr>`).join('');
 
@@ -502,14 +502,18 @@ function renderChart(yearsList){
         legend:{display:false},
         tooltip:{
           callbacks:{
-            label:context=> (currentLang==='it'?'Fatturato: ':'Revenue: ')+euro.format(context.raw)
+            label:context=> (currentLang==='it'?'Fatturato: ':'Revenue: ')+formatEuro(context.raw)
           }
         }
       },
       scales:{
         y:{
           ticks:{
-            callback:v=>euro.format(v).replace(',00','')
+            callback:v=> {
+              // Puliamo i decimali a seconda delle convenzioni linguistiche
+              let formatted = formatEuro(v);
+              return currentLang==='it' ? formatted.replace(',00','') : formatted.replace('.00','');
+            }
           },
           grid:{color:'#edf2f7'}
         },
@@ -542,12 +546,14 @@ clientSelect.addEventListener('change',e=>{
   let c=clients[e.target.value];
   if(!c){clientDetails.hidden=true;return}
   const t = langs[currentLang];
-  cTotal.textContent=euro.format(c.total);
+  const localeStr = currentLang==='it'?'it-IT':'en-US';
+  
+  cTotal.textContent=formatEuro(c.total);
   cPeso.textContent=totalSales?((c.total/totalSales)*100).toFixed(1)+'%':'0%';
-  cInvoices.textContent=c.count;
+  cInvoices.textContent=c.count.toLocaleString(localeStr);
   
   let avgInvoice = c.count ? (c.total / c.count) : 0;
-  cAverage.textContent=c.count?euro.format(avgInvoice):'—';
+  cAverage.textContent=c.count?formatEuro(avgInvoice):'—';
   
   let bayesianScore = getBayesianScore(c);
   cBayesScore.textContent = bayesianScore + ` ${t.points}`;
@@ -567,14 +573,14 @@ clientSelect.addEventListener('change',e=>{
   }
   cBayesRating.textContent = `${rating} (${t.lastActive}: ${lastInvoiceYear})`;
 
-  cFirst.textContent=df.format(c.first);
-  cLast.textContent=df.format(c.last);
+  cFirst.textContent=formatDate(c.first);
+  cLast.textContent=formatDate(c.last);
   let ys=Object.keys(c.years).sort((a,b)=>a-b),best=[...ys].sort((a,b)=>c.years[b].total-c.years[a].total)[0];
-  cBest.textContent=best?best+' · '+euro.format(c.years[best].total):'—';
-  clientYears.innerHTML=ys.map(y=>`<tr><td>${y}</td><td class="num">${euro.format(c.years[y].total)}</td><td>${c.years[y].count}</td></tr>`).join('');
+  cBest.textContent=best?best+' · '+formatEuro(c.years[best].total):'—';
+  clientYears.innerHTML=ys.map(y=>`<tr><td>${y}</td><td class="num">${formatEuro(c.years[y].total)}</td><td>${c.years[y].count.toLocaleString(localeStr)}</td></tr>`).join('');
   clientDetails.hidden=false;
 });
 
-// Applica la lingua predefinita iniziale (inglese)
+// Imposta l'Inglese come predefinito all'inizio
 setLanguage('en');
 </script></body></html>
